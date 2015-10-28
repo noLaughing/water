@@ -270,41 +270,42 @@ void Central2D<Physics, Limiter>::apply_periodic(std::vector<vec>* U,
     // indices SUBDOMAIN_SIZE to (SUBDOMAIN_SIZE + 2 * nghost = SIZE_WITH_GHOST) are ghost cells
     // this is different from the starter code
     
-    // Copy data between right and left boundaries
-	#pragma omp parallel for
-    for (int iy = 0; iy < SUBDOMAIN_SIZE; ++iy) {
-        int yOffset = iy * SIZE_WITH_GHOST;
-        
-        for (int ix = 0; ix < nghost; ++ix) {
-            int xOffset = ix + SUBDOMAIN_SIZE;
-            
-            (*U)[yOffset + xOffset] = (*right_u)[yOffset + ix];
-            (*U)[yOffset + xOffset + nghost] = (*left_u)[yOffset + xOffset - nghost];
+    #pragma omp parallel
+    {
+        // Copy data between right and left boundaries
+        #pragma omp for collapse(2)
+        for (int iy = 0; iy < SUBDOMAIN_SIZE; ++iy) {
+            for (int ix = 0; ix < nghost; ++ix) {
+                int yOffset = iy * SIZE_WITH_GHOST;
+                int xOffset = ix + SUBDOMAIN_SIZE;
+                
+                (*U)[yOffset + xOffset] = (*right_u)[yOffset + ix];
+                (*U)[yOffset + xOffset + nghost] = (*left_u)[yOffset + xOffset - nghost];
+            }
         }
-    }
 
-	#pragma omp parallel for
-    // Copy data between top and bottom boundaries
-    for (int ix = 0; ix < SUBDOMAIN_SIZE; ++ix)
-        for (int iy = 0; iy < nghost; ++iy) {
-            int yOffset = (iy + SUBDOMAIN_SIZE) * SIZE_WITH_GHOST;
-            
-            (*U)[yOffset + ix] = (*lower_u)[iy * SIZE_WITH_GHOST + ix];
-            (*U)[yOffset + ix + nghost*SIZE_WITH_GHOST] = (*upper_u)[ix + yOffset - nghost*SIZE_WITH_GHOST];
-        }
-    
-    #pragma omp parallel for
-    // copy data from corners
-    for( int ix = 0; ix < nghost; ++ix ) {
-        int xOffset = SUBDOMAIN_SIZE + ix;
+        #pragma omp for collapse(2)
+        // Copy data between top and bottom boundaries
+        for (int ix = 0; ix < SUBDOMAIN_SIZE; ++ix)
+            for (int iy = 0; iy < nghost; ++iy) {
+                int yOffset = (iy + SUBDOMAIN_SIZE) * SIZE_WITH_GHOST;
+                
+                (*U)[yOffset + ix] = (*lower_u)[iy * SIZE_WITH_GHOST + ix];
+                (*U)[yOffset + ix + nghost*SIZE_WITH_GHOST] = (*upper_u)[ix + yOffset - nghost*SIZE_WITH_GHOST];
+            }
         
-        for( int iy = 0; iy < nghost; ++iy ) {
-            int yOffset = (SUBDOMAIN_SIZE + iy) * SIZE_WITH_GHOST;
-            
-            (*U)[yOffset + xOffset] = (*lowerR_u)[iy*SIZE_WITH_GHOST + ix];
-            (*U)[yOffset + xOffset + nghost] = (*lowerL_u)[iy*SIZE_WITH_GHOST + xOffset - nghost];
-            (*U)[yOffset + nghost*SIZE_WITH_GHOST + xOffset] = (*upperR_u)[(SUBDOMAIN_SIZE + iy - nghost)*SIZE_WITH_GHOST + ix];
-            (*U)[yOffset + nghost*SIZE_WITH_GHOST + xOffset + nghost] = (*upperL_u)[(SUBDOMAIN_SIZE + iy - nghost)*SIZE_WITH_GHOST + xOffset - nghost];
+        #pragma omp for collapse(2)
+        // copy data from corners
+        for( int ix = 0; ix < nghost; ++ix ) {
+            for( int iy = 0; iy < nghost; ++iy ) {
+                int xOffset = SUBDOMAIN_SIZE + ix;
+                int yOffset = (SUBDOMAIN_SIZE + iy) * SIZE_WITH_GHOST;
+                
+                (*U)[yOffset + xOffset] = (*lowerR_u)[iy*SIZE_WITH_GHOST + ix];
+                (*U)[yOffset + xOffset + nghost] = (*lowerL_u)[iy*SIZE_WITH_GHOST + xOffset - nghost];
+                (*U)[yOffset + nghost*SIZE_WITH_GHOST + xOffset] = (*upperR_u)[(SUBDOMAIN_SIZE + iy - nghost)*SIZE_WITH_GHOST + ix];
+                (*U)[yOffset + nghost*SIZE_WITH_GHOST + xOffset + nghost] = (*upperL_u)[(SUBDOMAIN_SIZE + iy - nghost)*SIZE_WITH_GHOST + xOffset - nghost];
+            }
         }
     }
 }
